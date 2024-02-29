@@ -2,7 +2,7 @@
 
 MIDI-Utilized System Interface for Keyboards.
 
-Repository of code files for Spring 2024 Design & Development Group 4 Project.
+Source code for Spring 2024 Design & Development Group 4 Project.
 
 ## Important Links
 
