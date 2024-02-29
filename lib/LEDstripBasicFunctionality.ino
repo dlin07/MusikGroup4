@@ -20,7 +20,7 @@
 #define LED_PIN    6
 
 // How many NeoPixels are attached to the Arduino?
-#define LED_COUNT 144*2
+#define LED_COUNT 177
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -37,6 +37,10 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 // setup() function -- runs once at startup --------------------------------
 
 void setup() {
+
+  Serial.begin(115200);
+  Serial.setTimeout(5);
+
   // These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
   // Any other board, you can remove this part (but no harm leaving it):
 #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
@@ -48,22 +52,30 @@ void setup() {
   strip.show();            // Turn OFF all pixels ASAP
   strip.setBrightness(20); // Set BRIGHTNESS to about 1/5 (max = 255)
 }
-
+String incomingByte;
 
 // loop() function -- runs repeatedly as long as board is on ---------------
 
 void loop() {
-  for(int i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, strip.Color(0x7f, 0x3f, 0xb2));
-    delay(50);
-    strip.show();
-  }
 
-  for(int i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, strip.Color(0, 0, 0));
-    delay(50);
-    strip.show();
-  }
-  
+  if (Serial.available() > 0) {
+    // read the incoming byte:
+    incomingByte = Serial.readString();
 
+    // say what you got:
+    Serial.print("I received: ");
+    Serial.println(incomingByte);
+    int number = incomingByte.toInt();
+    
+    if(number == 108) {
+      for(int i = 0; i < LED_COUNT; i++) {
+        strip.setPixelColor(i, strip.Color(0x0, 0x0, 0x0));
+      }
+      strip.show();
+
+    } else {
+      strip.setPixelColor(number, strip.Color(0x7f, 0x3f, 0xb2));
+      strip.show();
+    }
+  }
 }
