@@ -1,6 +1,12 @@
 // A basic everyday NeoPixel strip test program.
 
 // NEOPIXEL BEST PRACTICES for most reliable operation:
+// GND go white
+// Data to green
+
+
+
+
 // - Add 1000 uF CAPACITOR between NeoPixel strip's + and - connections.
 // - MINIMIZE WIRING LENGTH between microcontroller board and first pixel.
 // - NeoPixel strip's DATA-IN should pass through a 300-500 OHM RESISTOR.
@@ -41,18 +47,16 @@ void setup() {
   Serial.begin(115200);
   Serial.setTimeout(5);
 
-  // These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
-  // Any other board, you can remove this part (but no harm leaving it):
-#if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
-  clock_prescale_set(clock_div_1);
-#endif
-  // END of Trinket-specific code.
-
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
   strip.setBrightness(20); // Set BRIGHTNESS to about 1/5 (max = 255)
+
+
+
+
 }
-String incomingByte;
+String incomingString;
+String raw;
 
 // loop() function -- runs repeatedly as long as board is on ---------------
 
@@ -60,22 +64,34 @@ void loop() {
 
   if (Serial.available() > 0) {
     // read the incoming byte:
-    incomingByte = Serial.readString();
+    raw = Serial.readString();
+    incomingString = "";
+    
+    for (int i = 0; i < raw.length(); i++) {
+        if (raw[i] != '\r') {
+            incomingString += raw[i];
+        }
+    }
+
+    int spacePos = incomingString.indexOf(' ');
+    // Extract the first part
+    String noteNumber = incomingString.substring(0, spacePos);
+
+    // Extract the second part
+    String noteVelocity = incomingString.substring(spacePos + 1);
 
     // say what you got:
     Serial.print("I received: ");
-    Serial.println(incomingByte);
-    int number = incomingByte.toInt();
+    Serial.println(incomingString);
+    int number = noteNumber.toInt();
+    int velocity = noteVelocity.toInt();
     
-    if(number == 108) {
-      for(int i = 0; i < LED_COUNT; i++) {
-        strip.setPixelColor(i, strip.Color(0x0, 0x0, 0x0));
-      }
-      strip.show();
-
+    if(velocity == 64) {
+      strip.setPixelColor(number, strip.Color(0x0, 0x0, 0x0));
     } else {
       strip.setPixelColor(number, strip.Color(0x7f, 0x3f, 0xb2));
-      strip.show();
     }
+    strip.show();
+
   }
 }
