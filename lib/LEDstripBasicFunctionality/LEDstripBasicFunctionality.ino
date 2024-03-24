@@ -1,10 +1,6 @@
-// A basic everyday NeoPixel strip test program.
-
 // NEOPIXEL BEST PRACTICES for most reliable operation:
-// GND go white
+// GND to white
 // Data to green
-
-
 
 
 // - Add 1000 uF CAPACITOR between NeoPixel strip's + and - connections.
@@ -22,7 +18,6 @@
 #endif
 
 // Which pin on the Arduino is connected to the NeoPixels?
-// On a Trinket or Gemma we suggest changing this to 1:
 #define LED_PIN    6
 
 // How many NeoPixels are attached to the Arduino?
@@ -42,56 +37,64 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // setup() function -- runs once at startup --------------------------------
 
-void setup() {
+int numberOfNotes;
+byte buffer[2];
 
+void setup() {
   Serial.begin(115200);
-  Serial.setTimeout(5);
+  Serial.setTimeout(1);
 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(20); // Set BRIGHTNESS to about 1/5 (max = 255)
-
-
-
-
+  strip.setBrightness(127); // Set BRIGHTNESS to about 1/5 (max = 255)
 }
-String incomingString;
-String raw;
 
 // loop() function -- runs repeatedly as long as board is on ---------------
 
+// pedal toggle
+bool pedal = false;
+
 void loop() {
+  
+  if(Serial.available() >= 2) {
+    Serial.readBytes(buffer, 2);
 
-  if (Serial.available() > 0) {
-    // read the incoming byte:
-    raw = Serial.readString();
-    incomingString = "";
-    
-    for (int i = 0; i < raw.length(); i++) {
-        if (raw[i] != '\r') {
-            incomingString += raw[i];
+    // read pedal
+    if(buffer[0] == 189) {
+      pedal = buffer[1];
+
+      if(pedal == false) {
+        strip.clear();
+        strip.show();
+      }
+      
+      // clear buffer
+      buffer[0] = 0x00;
+      buffer[1] = 0x00;
+    }
+
+    // read notes
+    if(buffer[0] >= 12 && buffer[0] <= 119) {
+      if(buffer[1] != 64) {
+        strip.setPixelColor(buffer[0], strip.Color(2*buffer[1], 2*buffer[1], 2*buffer[1], 2*buffer[1]));
+      } else {
+        if(!pedal) {
+          strip.setPixelColor(buffer[0], strip.Color(0x0, 0x0, 0x0, 0x0));
+        } else {
+          strip.setPixelColor(buffer[0], strip.getPixelColor(buffer[0]) & 0x0F0F0F0F);
         }
+
+      }
+      strip.show(); // Update LED strip with new info
+        
+      // clear buffer
+      buffer[0] = 0x00;
+      buffer[1] = 0x00;
+    }
+    // Serial.print(buffer[0]);
+    // Serial.print(" ");
+    // Serial.println(buffer[1]);
+
     }
 
-    int spacePos = incomingString.indexOf(' ');
-    // Extract the first part
-    String noteNumber = incomingString.substring(0, spacePos);
-
-    // Extract the second part
-    String noteVelocity = incomingString.substring(spacePos + 1);
-
-    // say what you got:
-    Serial.print("I received: ");
-    Serial.println(incomingString);
-    int number = noteNumber.toInt();
-    int velocity = noteVelocity.toInt();
-    
-    if(velocity == 64) {
-      strip.setPixelColor(number, strip.Color(0x0, 0x0, 0x0));
-    } else {
-      strip.setPixelColor(number, strip.Color(0x7f, 0x3f, 0xb2));
-    }
-    strip.show();
-
-  }
 }
