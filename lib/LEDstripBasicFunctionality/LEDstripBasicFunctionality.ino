@@ -36,34 +36,45 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
 
-#define whiteKeyWidth 22 // mm
-#define ledWidth 8 // mm
-
 
 
 // setup() function -- runs once at startup --------------------------------
 
+float whiteKeyWidth = 330.0/14; // mm, measured over 2 octaves
+float blackKeyWidth = 13.0; // mm, close enough approximation
+float ledWidth = 1000.0/144; // mm, 144 leds/1000 mm 
+
+
 int numberOfNotes = 0;
-int keyboardWidth = 0;
+// int keyboardWidth = 0;
+int startKey = 0;
 
 byte buffer[2];
 
 
 void setup() {
+  
+
   Serial.begin(115200);
   Serial.setTimeout(1);
 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(127); // Set BRIGHTNESS to about 1/5 (max = 255)
+  strip.setBrightness(32); // Set BRIGHTNESS to about 1/5 (max = 255)
 
   // waiting graphic for key range input
   bool mode = 1;
 
-  while(Serial.available() < 2) {
+  bool waitForInput = true;
+
+  while(waitForInput) {
     for(int i = 0; i < strip.numPixels(); i++) {  
       if(Serial.available() >= 2) {
-        break;
+        Serial.readBytes(buffer, 2);
+        if(buffer[0] >= 12 && buffer[0] <= 119) {
+          waitForInput = false;
+          break;
+        }
       }
 
       if(mode) {
@@ -81,12 +92,10 @@ void setup() {
 
   strip.fill(strip.Color(0, 8, 0, 8)); // green
   strip.show();
-  Serial.readBytes(buffer, 2);
   
-  numberOfNotes = buffer[1] - buffer[0];
-  keyboardWidth = midi_notes_to_white_keys(buffer[0], buffer[1]) * whiteKeyWidth;
-  Serial.print("keyboardWidth");
-  Serial.print(keyboardWidth);
+  // numberOfNotes = buffer[1] - buffer[0];
+  // keyboardWidth = midi_notes_to_white_keys(buffer[0], buffer[1]) * whiteKeyWidth;
+  startKey = buffer[0];
 
   // clear buffer
   buffer[0] = 0x00;
@@ -102,6 +111,7 @@ void setup() {
 bool pedal = false;
 
 void loop() {
+  
 
   
   if(Serial.available() >= 2) {
@@ -123,16 +133,8 @@ void loop() {
 
     // read notes
     if(buffer[0] >= 12 && buffer[0] <= 119) {
-      if(buffer[1] != 64) {
-        strip.setPixelColor(buffer[0], strip.Color(2*buffer[1], 2*buffer[1], 2*buffer[1], 2*buffer[1]));
-      } else {
-        if(!pedal) {
-          strip.setPixelColor(buffer[0], strip.Color(0x0, 0x0, 0x0, 0x0));
-        } else {
-          strip.setPixelColor(buffer[0], strip.getPixelColor(buffer[0]) & 0x0F0F0F0F);
-        }
-
-      }
+      
+      noteToLed(buffer[0], strip.Color(2*buffer[1], 2*buffer[1], 2*buffer[1], 2*buffer[1]), buffer[1]);
       strip.show(); // Update LED strip with new info
         
       // clear buffer
@@ -150,26 +152,75 @@ void loop() {
 // function definitions
 
 
-int midi_notes_to_white_keys(int note1, int note2) {
-    int pitch_class_note1 = note1 % 12;
-    int pitch_class_note2 = note2 % 12;
-    
-    int absolute_difference = abs(pitch_class_note2 - pitch_class_note1);
-    
-    int complete_octaves = abs(note2 - note1) / 12;
-    int white_keys_in_complete_octaves = complete_octaves * 7;
-    
-    int remaining_keys = absolute_difference % 12;
-    
+int whiteKeysToLeft(int note) {
     // Count the number of white keys in the remaining range
-    int white_keys = 0;
-    for (int i = 0; i <= remaining_keys; ++i) {
+    int whiteKeys = 0;
+    for (int i = startKey; i < note; i++) {
+        // C's are divisible by 12
         if (i % 12 == 0 || i % 12 == 2 || i % 12 == 4 || i % 12 == 5 || i % 12 == 7 || i % 12 == 9 || i % 12 == 11) {
-            white_keys++;
+            whiteKeys++;
         }
     }
+        
+    return whiteKeys;
+}
+
+void noteToLed(int noteNumber, uint32_t color, int action) {
+  float leftBound = whiteKeysToLeft(noteNumber) * whiteKeyWidth;
+  int blackKeyOffset = noteNumber % 12;
+  
+  if(blackKeyOffset == 1 || blackKeyOffset == 8) {
+    // C# and F#
+    leftBound -= 7;
+  } else if (blackKeyOffset == 6 || blackKeyOffset == 10) {
+    // A# and D#
+    leftBound -= 5;
+  } else if (blackKeyOffset == 3) {
+    //
+    leftBound -= 8;
+  }
+
+  float rightBound = leftBound;
+  if (noteNumber % 12 == 0 || noteNumber % 12 == 2 || noteNumber % 12 == 4 || noteNumber % 12 == 5 || noteNumber % 12 == 7 || noteNumber % 12 == 9 || noteNumber % 12 == 11) {
+    rightBound += whiteKeyWidth;
+  } else {
+    rightBound += blackKeyWidth;
+  }
+
+  // int rightBound = midi_notes_to_white_keys(startKey, noteNumber) * whiteKeyWidth;
+  // Serial.print("leftbound: ");
+  // Serial.println(leftBound);
+  // Serial.print("right: ");
+  // Serial.println(rightBound);
+
+  boundariesToLed(leftBound, rightBound, color, action);
+}
+
+void boundariesToLed(float startDist, float endDist, uint32_t color, int action) {
+  float lowerPixelNum = startDist / ledWidth;
+  float upperPixelNum = endDist / ledWidth;
+
+
+  for(int i = ceil(lowerPixelNum); i <= floor(upperPixelNum); i++) {
+
+    if(action != 64) {
+      strip.setPixelColor(i, color);
+    } else {
+      if(!pedal) {
+        strip.setPixelColor(i, strip.Color(0x0, 0x0, 0x0, 0x0));
+      } else {
+        strip.setPixelColor(i, strip.getPixelColor(i) & 0x07070707);
+        Serial.print(strip.getPixelColor(i));
+        // this returns 0?
+
+      }
+
+    }
     
-    int total_white_keys = white_keys_in_complete_octaves + white_keys;
-    
-    return total_white_keys;
+  
+  }
+
+  // aliasing
+  // float percentLowerPixelNum = lowerPixelNum - floor(lowerPixelNum);
+  // strip.setPixelColor(floor(lowerPixelNum), color);
 }

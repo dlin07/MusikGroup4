@@ -110,8 +110,8 @@ if __name__ == '__main__':
     arduino_thr.start()
     
     my_input = pygame.midi.Input(1)
-    sendNoteRange(my_input)
-    print(noteRange)
+    # sendNoteRange(my_input)
+    # print(noteRange)
 
     readInput(my_input)
 
