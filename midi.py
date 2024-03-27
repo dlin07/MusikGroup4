@@ -88,10 +88,13 @@ def sendNoteRange(input_device):
             if(len(noteRange) == 2):
                 noteRange.sort()
                 print(noteRange)
-                arduino.write((str(noteRange[0]) + " " + str(noteRange[1]) + "\n").encode('utf-8'))
+                packet = (noteRange[0] << 8) + noteRange[1]
+
+                arduino.write(packet.to_bytes(2, byteorder='big'))
+                sleep(0.01)
                 return
 
-            # print(noteRange)
+
 
 
         
@@ -107,8 +110,8 @@ if __name__ == '__main__':
     arduino_thr.start()
     
     my_input = pygame.midi.Input(1)
-    # sendNoteRange(my_input)
-    # print(noteRange)
+    sendNoteRange(my_input)
+    print(noteRange)
 
     readInput(my_input)
 
