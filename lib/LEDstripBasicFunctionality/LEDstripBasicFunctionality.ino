@@ -18,7 +18,6 @@
 #endif
 
 
-
 // Which pin on the Arduino is connected to the NeoPixels?
 #define LED_PIN    6
 
@@ -44,7 +43,6 @@ float whiteKeyWidth = 330.0/14; // mm, measured over 2 octaves
 float blackKeyWidth = 13.0; // mm, close enough approximation
 float ledWidth = 1000.0/144; // mm, 144 leds/1000 mm 
 
-
 int numberOfNotes = 0;
 // int keyboardWidth = 0;
 int startKey = 0;
@@ -53,8 +51,6 @@ byte buffer[2];
 
 
 void setup() {
-  
-
   Serial.begin(115200);
   Serial.setTimeout(1);
 
@@ -109,42 +105,59 @@ void setup() {
 
 // pedal toggle
 bool pedal = false;
+// RGB
+byte mood[3] = {0x00, 0xFF, 0x00};
+
 
 void loop() {
-  
-
   
   if(Serial.available() >= 2) {
     Serial.readBytes(buffer, 2);
 
-    // read pedal
-    if(buffer[0] == 189) {
-      pedal = buffer[1];
-
-      if(pedal == false) {
-        strip.clear();
-        strip.show();
-      }
-      
-      // clear buffer
-      buffer[0] = 0x00;
-      buffer[1] = 0x00;
-    }
-
     // read notes
     if(buffer[0] >= 12 && buffer[0] <= 119) {
-      
-      noteToLed(buffer[0], strip.Color(2*buffer[1], 2*buffer[1], 2*buffer[1], 2*buffer[1]), buffer[1]);
-      strip.show(); // Update LED strip with new info
-        
-      // clear buffer
-      buffer[0] = 0x00;
-      buffer[1] = 0x00;
-    }
-    // Serial.print(buffer[0]);
-    // Serial.print(" ");
-    // Serial.println(buffer[1]);
+      // chatgpt byte fractions, takes the velocity/127th fraction of each mood color
+      noteToLed(buffer[0], strip.Color(
+        static_cast<int>(static_cast<unsigned char>(buffer[1] * (static_cast<double>(mood[0]) / 127.0))), 
+        static_cast<int>(static_cast<unsigned char>(buffer[1] * (static_cast<double>(mood[1]) / 127.0))), 
+        static_cast<int>(static_cast<unsigned char>(buffer[1] * (static_cast<double>(mood[2]) / 127.0))), 
+        0xFF), buffer[1]);
 
+      strip.show(); // Update LED strip with new info
+    }
+    
+    switch(buffer[0]) {
+      // RGB
+      case 1:
+        mood[0] = buffer[1];
+        break; 
+      case 2:
+        mood[1] = buffer[1];
+        break;
+      case 3:
+        mood[2] = buffer[1];
+        Serial.println("Mood response: ");
+
+        Serial.println(mood[0]);
+        Serial.println(mood[1]);
+        Serial.println(mood[2]);
+
+        break;
+
+      // read pedal
+      case 189:
+        pedal = buffer[1];
+
+        if(pedal == false) {
+          strip.clear();
+          strip.show();
+        }
+        break;
+    }
+
+    // clear buffer
+    buffer[0] = 0x00;
+    buffer[1] = 0x00;   
     }
 
 }
@@ -209,10 +222,9 @@ void boundariesToLed(float startDist, float endDist, uint32_t color, int action)
       if(!pedal) {
         strip.setPixelColor(i, strip.Color(0x0, 0x0, 0x0, 0x0));
       } else {
-        strip.setPixelColor(i, strip.getPixelColor(i) & 0x07070707);
-        Serial.print(strip.getPixelColor(i));
-        // this returns 0?
-
+        // Serial.print(strip.getPixelColor(i), HEX);
+        strip.setPixelColor(i, strip.Color(mood[0] & 0xA, mood[1] & 0xA, mood[2] & 0xA, 0));
+      
       }
 
     }
