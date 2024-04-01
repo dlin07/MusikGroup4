@@ -4,12 +4,13 @@ import threading
 from time import sleep
 import time
 import random
+import numpy as np
 
 port_name = "COM3"
 baud = 115200
 arduino = Serial(port_name, baud, timeout=0)
 
-# noteRange = []
+noteState = np.zeros(120)
 
 class arduino_thread(threading.Thread):
 
@@ -27,7 +28,7 @@ class arduino_thread(threading.Thread):
                 print("arduino message: ", message)
 
 
-
+    
 
 def print_devices():
     for n in range(pygame.midi.get_count()):
@@ -42,12 +43,12 @@ def readInput(input_device):
     emotions = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255)]
 
     while True:
-        if(time.time() - moodChanger >= 1):
-            choice = random.choice(emotions)
-            print(choice)
-            setMood(choice[0], choice[1], choice[2])
-            moodChanger = time.time()
-            print("mood set")
+        # if(time.time() - moodChanger >= 1):
+        #     choice = random.choice(emotions)
+        #     print(choice)
+        #     setMood(choice[0], choice[1], choice[2])
+        #     moodChanger = time.time()
+        #     print("mood set")
 
 
         if input_device.poll():
@@ -62,6 +63,14 @@ def readInput(input_device):
             if(event == 159 or event == 143):
                 # note pressed or released
                 specifier = note_number << 8
+                
+                global noteState
+                if (event == 159):
+                    noteState[note_number] = 1
+                elif (event == 143):
+                    noteState[note_number] = 0
+                # print(noteState)
+
             
             if(event == 189 or event == 190 or event == 191):
                 # pedal event
@@ -74,7 +83,7 @@ def readInput(input_device):
             # Convert packet to 2 bytes and send over serial
             arduino.write(packet.to_bytes(2, byteorder='big'))
             sleep(0.01)
-            print(str(specifier >> 8) + " " + str(modifier))
+            # print(str(specifier >> 8) + " " + str(modifier))
 
 def setMood(red, green, blue):
     rgb = [red, green, blue]
@@ -93,37 +102,6 @@ def setMood(red, green, blue):
 
 
 
-# def sendNoteRange(input_device):
-#     global noteRange
-    
-#     while True:
-#         if input_device.poll():
-#             event = input_device.read(1)[0]
-
-#             data = event[0]
-
-#             event_type = data[0]
-#             note_number = data[1]
-
-#             if(event_type == 159):
-#                 noteRange.append(note_number)
-#             elif(event_type == 143):
-#                 # print(noteRange)
-#                 noteRange.remove(note_number)
-
-#             # if(len(noteRange) == 2):
-#             #     noteRange = noteRange.sort()
-#             if(len(noteRange) == 2):
-#                 noteRange.sort()
-#                 print(noteRange)
-#                 packet = (noteRange[0] << 8) + noteRange[1]
-
-#                 arduino.write(packet.to_bytes(2, byteorder='big'))
-#                 sleep(0.01)
-#                 return
-
-
-
 if __name__ == '__main__':
     pygame.midi.init()
     print_devices()
@@ -132,8 +110,6 @@ if __name__ == '__main__':
     arduino_thr.start()
     
     my_input = pygame.midi.Input(1)
-    # sendNoteRange(my_input)
-    # print(noteRange)
-
+    
     readInput(my_input)
 
