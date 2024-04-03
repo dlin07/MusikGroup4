@@ -2,27 +2,23 @@ import sys, random, os, time
 import pygame
 pygame.init()
 pygame.mixer.init()
-FPS = 60
+FPS = 120
 size=width, height=1500, 650
 screen_w = width
 screen_h = height
 half_w = screen_w/2
-pygame.display.set_caption("Tiles")
+pygame.display.set_caption("Musik")
 note_speed = 2
 score = 0
-try:
-    hscore = int(open('.hs','r').readline())
-except:
-    hscore = 0
-    open('.hs','w').write(str(hscore))
+hscore = 0
 rows = 88
 row_w = screen_w / rows
 row_h = screen_h
 tile_w = row_w - 2
 half_t_w = tile_w/2
 tile_h = tile_w*2
-blinking_text = False # change this to change blinking text state
 y = 10
+fLines = open("MIDI_sample_output.txt", "r").read().splitlines()
 class rgb:
     BLACK = (0,0,0)
     WHITE = (255,255,255)
@@ -30,6 +26,13 @@ class rgb:
     RED = (255,0,0)
     GREEN = (0,255,0)
     YELLOW = (255,255,0)
+def number_to_note(number, whole_only):
+    if (whole_only):
+        notes = ['A','B','C','D','E','F','G']
+        return notes[number%len(notes)]
+    else:
+        notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        return notes[number%12]
 screen = pygame.display.set_mode(size)
 clock = pygame.time.Clock()
 def font(font_name,size):
@@ -42,10 +45,13 @@ def label(font_name,size,text,rgb,pos,center=False):
     else:
         screen.blit(lbl, lbl.get_rect(center=center))
 def add_tile():
-    global tiles, rows, row_w
-    row = random.randint(int(0),int(rows-1)) # Random addition of tile
-    color = rrgb()
-    color = color if color != rgb.BLACK and color != rgb.WHITE else random.choice([rgb.BLUE,rgb.YELLOW,rgb.GREEN,rgb.RED])
+    global tiles, rows, row_w, r_num
+    # row = random.randint(int(0),int(rows-1)) # Random addition of tile
+    row = int(fLines[r_num])
+    r_num += 1
+    color = rgb.BLUE
+    if color == rgb.BLACK or color == rgb.WHITE:
+        color = random.choice([rgb.BLUE,rgb.YELLOW,rgb.GREEN,rgb.RED])
     def getY():
         global tile_h
         n = -random.randint(int(tile_h),int(1000))
@@ -58,10 +64,6 @@ def add_tile():
             return t[2]-tile_h-1
     y = getY()
     tiles.append([color,2+row_w*row,y])
-def rrgb():
-    def c():
-        return random.randint(0,255)
-    return (c(),c(),c()) if blinking_text == True else rgb.BLACK
 def play(filename_with_sound):
     pygame.mixer.music.load(open("sounds/%s"%(filename_with_sound),"rb"))
     pygame.mixer.music.play()
@@ -86,15 +88,15 @@ def highscore(method):
             hscore_msg = True
             open('.hs','w').write(str(score))
     elif method == "BGCOLOR":
-        if score < hscore or score == 0:
+        # if score < hscore or score == 0:
             return rgb.WHITE
-        else:
-            return rgb.BLACK
+        # else:
+            # return rgb.BLACK
     elif method == "FGCOLOR":
-        if score < hscore or score == 0:
+        # if score < hscore or score == 0:
             return rgb.BLACK
-        else:
-            return rgb.WHITE
+        # else:
+            # return rgb.WHITE
 def click_tile():
     global mouse_position, tiles, score, tile_w, tile_h
     x, y = mouse_position
@@ -108,8 +110,6 @@ def click_tile():
             add_tile()
             score += 1
         i += 1
-    # if click_on_tile == False: # "Lose" condition
-        # end_game()
 def handle_title_tile_click(select_from):
     global mouse_position, score, tile_w, tile_h, rows
     x, y = mouse_position
@@ -143,38 +143,15 @@ def screens_click():
             cur_screen += 2
         elif selection == rgb.BLUE:
             cur_screen += 3
-    elif cur_screen == 1:
-        cur_screen -= 1
-        note_speed = int(selected_long[4])
-    elif cur_screen == 2:
-        cur_screen -= 2
-        rows = int(selected_long[4])
-        row_w = screen_w / rows
-        row_h = screen_h
-        tile_w = row_w - 2
-        tile_h = tile_w*2
-        half_t_w = tile_w/2
-    elif cur_screen == 3:
-        cur_screen -= 3
-        volume = pygame.mixer.music.set_volume
-        if selection == rgb.RED:
-            volume(0.0)
-        elif selection == rgb.YELLOW:
-            volume(0.25)
-        elif selection == rgb.GREEN:
-            volume(0.50)
-        elif selection == rgb.BLUE:
-            volume(1.0)
 def draw_vertical_lines():
     global rows, screen, row_w, row_h
     for x in range(0,rows+1):
         pygame.draw.line(screen, highscore("FGCOLOR"), (row_w*x, 0), (row_w*x, row_h), 2)
+        label("monospace", 15, number_to_note(x, False) ,rgb.BLACK,(),center=(row_w*x + row_w/2, screen_h-20))
 tiles = []
-title_screen = [[rgb.RED, 200, tile_w, tile_h, "Play!",30],[rgb.YELLOW,400,tile_w,tile_h, "Difficulty",15],[rgb.GREEN,150,tile_w,tile_h,"Rows",35],[rgb.BLUE,300,tile_w,tile_h,"Noise",15]]
-difficulty_screen = [[rgb.RED, 200, tile_w, tile_h,"2",100],[rgb.YELLOW,400,tile_w,tile_h,"3",100],[rgb.GREEN,150,tile_w,tile_h,"4",100],[rgb.BLUE,300,tile_w,tile_h,"5",100]]
-row_screen = [[rgb.RED, 200, tile_w, tile_h,"2",100],[rgb.YELLOW,400,tile_w,tile_h,"3",100],[rgb.GREEN,150,tile_w,tile_h,"4",100],[rgb.BLUE,300,tile_w,tile_h,"6",100]]
-volume_screen = [[rgb.RED, 200, tile_w, tile_h,"0",100],[rgb.YELLOW,400,tile_w,tile_h,"25",100],[rgb.GREEN,150,tile_w,tile_h,"50",100],[rgb.BLUE,300,tile_w,tile_h,"100",100]]
-screens = [title_screen,difficulty_screen,row_screen,volume_screen]
+r_num = 0;
+title_screen = [[rgb.RED, 200, tile_w, tile_h, "Play!",30]]
+screens = [title_screen]
 cur_screen = 0
 game = False
 hscore_msg = False
@@ -195,11 +172,11 @@ while True:
             if rows != 2 or t[0] in [rgb.RED, rgb.GREEN]:
                 cur_row = i
                 pygame.draw.rect(screen, t[0], [2+row_w*cur_row, t[1], tile_w, tile_h], 0)
-                label("monospace",tile_w/len(t[4])+5,t[4],rrgb(),(),center=(tile_w*cur_row+half_t_w+cur_row*2.5,t[1]+tile_h/2))
+                label("monospace",tile_w/len(t[4])+5,t[4],rgb.BLACK,(),center=(tile_w*cur_row+half_t_w+cur_row*2.5,t[1]+tile_h/2))
                 i += 1
         if hscore_msg == False:
-            label("monospace",100,"Tiles",rgb.BLACK,(),center=(half_w, 100))
-            label("monospace", 15,"High Score:" + str(hscore),rgb.BLACK,(),center=(half_w, screen_h-20))
+            label("monospace",100,"Musik",rgb.BLACK,(),center=(half_w, 100))
+            # label("monospace", 26,"A B C D E F G A B C D E F G A B C D E F G A B C D E F G A B C D E F G A B C D E F G A B C D E F G",rgb.BLACK,(),center=(half_w, screen_h-20))
         else:
             label("monospace",65,"High Score!",rgb.BLACK,(),center=(half_w, 100))
             label("monospace",100,str(hscore),rgb.BLACK,(),center=(half_w, 200))
