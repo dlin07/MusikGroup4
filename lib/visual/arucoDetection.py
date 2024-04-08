@@ -1,6 +1,7 @@
 import cv2 as cv
 from cv2 import aruco
 import numpy as np
+import os as os
 
 markerPositions = []
 for i in range(0, 6):
@@ -13,12 +14,23 @@ detector = aruco.ArucoDetector(marker_dict, param_markers)
 
 cap = cv.VideoCapture(1)
 
-calibration = cv.imread('defaultAruco.png')
-calibrationR = cv.resize(calibration, (int(1920/1.25), int(1080/1.25)))
+absolutePath = os.path.join(os.getcwd(), 'lib', 'visual', 'defaultAruco.png')
+
+calibration = cv.imread(absolutePath)
+calibrationR = cv.resize(calibration, (int(1920), int(1080)))
+
+origImg = calibrationR
+
 cv.imshow('calibration', calibrationR)
+srcTri = None
+dstTri = None
+warpMat = None
 
 def transformCalibrationDisplay(mPos):
     global calibrationR
+    global srcTri
+    global dstTri
+    global warpMat
     # 0, 1, 2 = tl, tr, bl display triangle
     # 3, 4, 5 = tl, tr, bl actual triangle
     # scale actual triangle to half the size
@@ -35,13 +47,14 @@ def transformCalibrationDisplay(mPos):
     print(mPos)
     # print(calibration.shape)
     srcTri = np.array([[mPos[0][0], mPos[0][1]],[mPos[1][0], mPos[1][1]],[mPos[2][0], mPos[2][1]]]).astype(np.float32)
-    dstTri = np.array([[actualTlShrunk[0], actualTlShrunk[1]],[actualTrShrunk[0],actualTrShrunk[1]],[actualBlShrunk[0], actualBlShrunk[1]]]).astype(np.float32)
+    # dstTri = np.array([[actualTlShrunk[0], actualTlShrunk[1]],[actualTrShrunk[0],actualTrShrunk[1]],[actualBlShrunk[0], actualBlShrunk[1]]]).astype(np.float32)
+    dstTri = np.array([[mPos[3][0], mPos[3][1]],[mPos[4][0], mPos[4][1]],[mPos[5][0], mPos[5][1]]]).astype(np.float32)
 
     print(srcTri)
     print(dstTri)
-    warp_mat = cv.getAffineTransform(srcTri, dstTri)
+    warpMat = cv.getAffineTransform(srcTri, dstTri)
 
-    warpedImg = cv.warpAffine(calibrationR, warp_mat, (calibrationR.shape[1], calibrationR.shape[0]))
+    warpedImg = cv.warpAffine(calibrationR, warpMat, (calibrationR.shape[1], calibrationR.shape[0]))
 
     # translate
     translation_matrix = np.float32([ [1,0,center[0] - displayCenter[0]], [0,1,center[1] - displayCenter[1]] ])   
@@ -60,6 +73,19 @@ while True:
     marker_corners, marker_IDs, reject = detector.detectMarkers(gray_frame)
     # print(marker_corners)
     
+    if not (srcTri is None):
+        cv.polylines(
+            frame, [srcTri.astype(np.int32)], True, (0,255,255)
+        )
+        cv.polylines(
+            frame, [dstTri.astype(np.int32)], True, (0,255,255)
+        )
+        # display the warped triangle and see if it matches
+        transformed = cv.transform(np.array([srcTri]), warpMat)
+        cv.polylines(
+            frame, [transformed.astype(np.int32)], True, (255,0,0)
+        )
+
     if marker_corners:
         for ids, corners in zip(marker_IDs, marker_corners):
             cv.polylines(
@@ -95,6 +121,8 @@ while True:
         transformCalibrationDisplay(markerPositions)
     elif key == ord("q"):
         break
+    elif (key) == ord("s"):
+        cv.imshow('calibration', origImg)
 cap.release()
 cv.destroyAllWindows()
 
