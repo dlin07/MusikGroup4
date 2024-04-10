@@ -35,6 +35,6 @@ for i in mididict:
 # viewing the midimessages.
 sourceFile = open('MIDI_sample_output.txt', 'w')
 for i in output:
-    print(i, file = sourceFile)
+    print(i[1], file = sourceFile)
 print(mid.ticks_per_beat, file = sourceFile)
 sourceFile.close()
