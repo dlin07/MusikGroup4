@@ -5,10 +5,15 @@ from time import sleep
 import time
 import random
 import numpy as np
+import music21
 
 port_name = "COM3"
 baud = 115200
-arduino = Serial(port_name, baud, timeout=0)
+arduino = None
+try:
+    arduino = Serial(port_name, baud, timeout=0)
+except:
+    print("Arduino unable to connect")
 
 noteState = np.zeros(120)
 
@@ -21,6 +26,9 @@ class arduino_thread(threading.Thread):
         self.counter = counter
 
     def run(self):
+        if(arduino is None):
+            return
+
         while(True):
             if(arduino.in_waiting):
                 message = arduino.readline()
@@ -43,12 +51,12 @@ def readInput(input_device):
     emotions = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255)]
 
     while True:
-        # if(time.time() - moodChanger >= 1):
-        #     choice = random.choice(emotions)
-        #     print(choice)
-        #     setMood(choice[0], choice[1], choice[2])
-        #     moodChanger = time.time()
-        #     print("mood set")
+        if(time.time() - moodChanger >= 0.1):
+            choice = random.choice(emotions)
+            # print(choice)
+            # setMood(choice[0], choice[1], choice[2])
+            moodChanger = time.time()
+            # print("mood set")
 
 
         if input_device.poll():
@@ -70,6 +78,8 @@ def readInput(input_device):
                 elif (event == 143):
                     noteState[note_number] = 0
                 # print(noteState)
+                findChordName()
+
 
             
             if(event == 189 or event == 190 or event == 191):
@@ -81,7 +91,10 @@ def readInput(input_device):
             # arduino reads this as modifier + specifier?
             
             # Convert packet to 2 bytes and send over serial
-            arduino.write(packet.to_bytes(2, byteorder='big'))
+            try:
+                arduino.write(packet.to_bytes(2, byteorder='big'))
+            except:
+                print("unable to write modifier specifier to arduino")
             sleep(0.01)
             # print(str(specifier >> 8) + " " + str(modifier))
 
@@ -95,21 +108,48 @@ def setMood(red, green, blue):
         packet = specifier + modifier
         # arduino reads this as modifier + specifier?
         
-        # Convert packet to 2 bytes and send over serial
-        arduino.write(packet.to_bytes(2, byteorder='big'))
+        try:
+            # Convert packet to 2 bytes and send over serial
+            arduino.write(packet.to_bytes(2, byteorder='big'))
+        except:
+            print("unable to write mood")
         sleep(0.01)
         # print(str(specifier >> 8) + " " + str(modifier))
 
 
+def findChordName():
+    chordString = ""
+
+    for noteNum, state in enumerate(noteState):
+        if state != 0:
+            chordString += number_to_note(noteNum) + " "
+
+    chordString = chordString[:-1]
+    print(chordString)
+    # print(music21.chord.Chord(chordString).pitchedCommonName)
+    try:
+        print(music21.chord.Chord(chordString).pitchedCommonName)
+    except:
+        # print("no chord")
+        print("")
+        
+
 
 if __name__ == '__main__':
-    pygame.midi.init()
-    print_devices()
-
-    arduino_thr = arduino_thread(1, "Arduino-Comm", 1)
-    arduino_thr.start()
+    try:
+        pygame.midi.init()
+        print_devices()
+    except:
+        print("unable to open device")
     
-    my_input = pygame.midi.Input(1)
-    
-    readInput(my_input)
+    try:
+        arduino_thr = arduino_thread(1, "Arduino-Comm", 1)
+        arduino_thr.start()
+    except:
+        print("Unable to make arduino thread")
 
+    try:
+        my_input = pygame.midi.Input(1)
+        readInput(my_input)
+    except:
+        print("unable to read input")
