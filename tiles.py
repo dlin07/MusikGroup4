@@ -11,7 +11,7 @@ screen_w = width
 screen_h = height
 half_w = screen_w/2
 pygame.display.set_caption("Musik")
-note_speed = 5
+note_speed = 3
 score = 0
 rows = 88
 row_w = screen_w / rows
@@ -84,30 +84,11 @@ def click_tile():
             del tiles[i]
         i += 1
     print(time.time())
-def handle_title_tile_click(select_from):
-    global mouse_position, score, tile_w, tile_h, rows
+def handle_title_tile_click():
+    global mouse_position
     x, y = mouse_position
-    i = 0
-    z = 0
-    click_on_tile = False
-    for t in select_from:
-        if rows != 2 or t[0] in [rgb.RED, rgb.GREEN]:
-            cur_row = z
-            if x > 2+row_w*cur_row and x < 2+row_w*cur_row + tile_w and y > t[1] and y < t[1] + tile_h:
-                click_on_tile = True
-                return select_from[i]
-            z += 1
-        i += 1
-def screens_click():
-    global screens, cur_screen, note_speed, rows, row_w, row_h, screen_w, screen_h, half_t_w, tile_w, tile_h
-    selection = handle_title_tile_click(screens[cur_screen])
-    selected_long = selection
-    if selection == None:
-        return None
-    selection = selection[0]
-    if cur_screen == 0:
-        if selection == rgb.RED:
-            start_game()
+    if x > 500 and x < 1000 and y > 350 and y < 550:
+        start_game()
 def draw_vertical_lines():
     global rows, screen, row_w, row_h
     for x in range(0,rows+1):
@@ -115,8 +96,6 @@ def draw_vertical_lines():
         # label("monospace", 15, number_to_note(x, False) ,rgb.BLACK,(),center=(row_w*x + row_w/2, screen_h-20))
 tiles = []
 r_num = 0;
-title_screen = [[rgb.RED, 200, tile_w, tile_h, "Play!",30]]
-screens = [title_screen]
 cur_screen = 0
 game = False
 while True:
@@ -128,14 +107,9 @@ while True:
             if t[2] < row_h and t[2] + tile_h != row_h:
                 t[2] = t[2]+note_speed
     else:
+        pygame.draw.rect(screen, (255,0,0), (500, 350, 500, 200))
         label("monospace",100,"Musik",rgb.BLACK,(),center=(half_w, 100))
-        i = 0
-        for t in screens[cur_screen]:
-            if rows != 2 or t[0] in [rgb.RED, rgb.GREEN]:
-                cur_row = i
-                pygame.draw.rect(screen, t[0], [2+row_w*cur_row, t[1], tile_w, tile_h], 0)
-                label("monospace",tile_w/len(t[4])+5,t[4],rgb.BLACK,(),center=(tile_w*cur_row+half_t_w+cur_row*2.5,t[1]+tile_h/2))
-                i += 1
+        label("monospace",50,"Play",rgb.BLACK,(),center=(half_w, 450))
     for event in pygame.event.get():
         mouse_buttons = pygame.mouse.get_pressed()
         mouse_position = pygame.mouse.get_pos()
@@ -145,6 +119,7 @@ while True:
             if game == True:
                 click_tile()
             else:
-                screens_click()
+                if cur_screen == 0:
+                    handle_title_tile_click()
     pygame.display.flip()
     clock.tick(FPS)
