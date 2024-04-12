@@ -13,7 +13,7 @@ half_w = screen_w/2
 pygame.display.set_caption("Musik")
 note_speed = 3
 score = 0
-rows = 88
+rows = 52
 row_w = screen_w / rows
 row_h = screen_h
 tile_w = row_w - 2
@@ -28,13 +28,24 @@ class rgb:
     RED = (255,0,0)
     GREEN = (0,255,0)
     YELLOW = (255,255,0)
-def number_to_note(number, whole_only):
-    if (whole_only):
-        notes = ['A','B','C','D','E','F','G']
+def number_to_note(number, white_only):
+    if (white_only):
+        notes = ['C','D','E','F','G','A','B']
         return notes[number%len(notes)]
     else:
         notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
         return notes[number%12]
+def twelve_to_white_only(number):
+    sw = {
+        0: 0, #A
+        2: 1, #B
+        3: 2, #C
+        5: 3, #D
+        7: 4, #E
+        8: 5, #F
+        10: 6 #G
+    }
+    return sw.get(number, -1);
 screen = pygame.display.set_mode(size)
 clock = pygame.time.Clock()
 print(time.time())
@@ -49,8 +60,12 @@ def label(font_name,size,text,rgb,pos,center=False):
         screen.blit(lbl, lbl.get_rect(center=center))
 def add_tile():
     global tiles, rows, row_w, r_num
-    row = int(fLines[r_num][1])
-    r_num += 1
+    c = int(fLines[r_num][1])
+    lst = [0, 2, 4, 5, 7, 9, 11]
+    if c % 12 in lst:
+        row = ((c - 21) // 12) * 7 + twelve_to_white_only((c - 21) % 12)
+    else:
+        row = 0
     color = rgb.BLUE
     if color == rgb.BLACK or color == rgb.WHITE:
         color = random.choice([rgb.BLUE,rgb.YELLOW,rgb.GREEN,rgb.RED])
@@ -65,13 +80,14 @@ def add_tile():
         except:
             return t[2]-tile_h-1
     y = getY()
-    tiles.append([color,2+row_w*row,y])
+    tiles.append([color,2+row_w*row, -int(fLines[r_num][2])*300, row])
+    r_num += 1
 # def find_length():
     
 def start_game():
     global game, tiles
     game = True
-    tiles = [[rgb.BLUE, 2, -tile_h*2]]
+    tiles = [[rgb.BLUE, 2, -tile_h*2, 0]]
     [add_tile() for x in range(0, len(fLines))]
 def click_tile():
     global mouse_position, tiles, score, tile_w, tile_h
@@ -93,7 +109,7 @@ def draw_vertical_lines():
     global rows, screen, row_w, row_h
     for x in range(0,rows+1):
         pygame.draw.line(screen, (0,0,0), (row_w*x, 0), (row_w*x, row_h), 2)
-        # label("monospace", 15, number_to_note(x, False) ,rgb.BLACK,(),center=(row_w*x + row_w/2, screen_h-20))
+        # label("monospace", 15, number_to_note(x + 5, True) ,rgb.BLACK,(),center=(row_w*x + row_w/2, screen_h-20))
 tiles = []
 r_num = 0;
 cur_screen = 0
@@ -104,6 +120,7 @@ while True:
     if game == True:
         for t in tiles:
             pygame.draw.rect(screen, t[0], [t[1], t[2], tile_w, tile_h], 0)
+            # label("monospace", 15, number_to_note(t[3], True), rgb.BLACK,(),center=(t[1],t[2]))
             if t[2] < row_h and t[2] + tile_h != row_h:
                 t[2] = t[2]+note_speed
     else:
