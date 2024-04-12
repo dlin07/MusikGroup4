@@ -128,7 +128,16 @@ def findChordName():
     print(chordString)
     # print(music21.chord.Chord(chordString).pitchedCommonName)
     try:
-        print(music21.chord.Chord(chordString).pitchedCommonName)
+        chordName = music21.chord.Chord(chordString).pitchedCommonName
+        print(chordName)
+        if(chordName.find('minor') != -1):
+            setMood(0, 0, 255)
+        elif(chordName.find('major') != -1):
+            setMood(255, 255, 0)
+        
+
+        
+
     except:
         # print("no chord")
         print("")
