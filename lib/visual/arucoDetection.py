@@ -12,7 +12,9 @@ marker_dict = aruco.getPredefinedDictionary(aruco.DICT_5X5_50)
 param_markers = aruco.DetectorParameters()
 detector = aruco.ArucoDetector(marker_dict, param_markers)
 
-cap = cv.VideoCapture(1)
+cap = cv.VideoCapture(0, cv.CAP_DSHOW)
+cap.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
+cap.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
 
 absolutePath = os.path.join(os.getcwd(), 'lib', 'visual', 'defaultAruco.png')
 
@@ -54,12 +56,22 @@ def transformCalibrationDisplay(mPos):
     # print(projectedTri)
     # print(realTri)
     defaultToCamera = cv.getAffineTransform(defaultTri, projectedTri)
+    defaultToCamera = np.vstack((defaultToCamera, np.array([0, 0, 1]).astype(np.float32)))
     cameraToDefault = cv.getAffineTransform(projectedTri, defaultTri)
+    cameraToDefault = np.vstack((cameraToDefault, np.array([0, 0, 1]).astype(np.float32)))
     projectedToReal = cv.getAffineTransform(projectedTri, realTri)
+    projectedToReal = np.vstack((projectedToReal, np.array([0, 0, 1]).astype(np.float32)))
 
-    warpedImg = cv.warpAffine(calibrationR, defaultToCamera, (calibrationR.shape[1], calibrationR.shape[0]))
-    warpedImg = cv.warpAffine(warpedImg, projectedToReal, (warpedImg.shape[1], warpedImg.shape[0]))
-    warpedImg = cv.warpAffine(warpedImg, cameraToDefault, (warpedImg.shape[1], warpedImg.shape[0]))
+    # totalTransformation = np.matmul(np.matmul(defaultToCamera, projectedToReal), cameraToDefault)
+    totalTransformation = np.matmul(np.matmul(cameraToDefault, projectedToReal), defaultToCamera)
+    totalTransformation = totalTransformation[:2, :]
+
+    # warpedImg = cv.warpAffine(calibrationR, defaultToCamera, (calibrationR.shape[1], calibrationR.shape[0]))
+    # warpedImg = cv.warpAffine(warpedImg, projectedToReal, (warpedImg.shape[1], warpedImg.shape[0]))
+    # warpedImg = cv.warpAffine(warpedImg, cameraToDefault, (warpedImg.shape[1], warpedImg.shape[0]))
+
+
+    warpedImg = cv.warpAffine(calibrationR, totalTransformation, (calibrationR.shape[1], calibrationR.shape[0]))
 
     # translate
     # translation_matrix = np.float32([ [1,0,center[0] - displayCenter[0]], [0,1,center[1] - displayCenter[1]] ])   
@@ -78,18 +90,18 @@ while True:
     marker_corners, marker_IDs, reject = detector.detectMarkers(gray_frame)
     # print(marker_corners)
     
-    if not (projectedTri is None):
-        cv.polylines(
-            frame, [projectedTri.astype(np.int32)], True, (0,255,255)
-        )
-        cv.polylines(
-            frame, [realTri.astype(np.int32)], True, (0,255,255)
-        )
-        # display the warped triangle and see if it matches
-        transformed = cv.transform(np.array([projectedTri]), projectedToReal)
-        cv.polylines(
-            frame, [transformed.astype(np.int32)], True, (255,0,0)
-        )
+    # if not (projectedTri is None):
+    #     cv.polylines(
+    #         frame, [projectedTri.astype(np.int32)], True, (0,255,255)
+    #     )
+    #     cv.polylines(
+    #         frame, [realTri.astype(np.int32)], True, (0,255,255)
+    #     )
+    #     # display the warped triangle and see if it matches
+    #     transformed = cv.transform(np.array([projectedTri]), projectedToReal)
+    #     cv.polylines(
+    #         frame, [transformed.astype(np.int32)], True, (255,0,0)
+    #     )
 
     if marker_corners:
         for ids, corners in zip(marker_IDs, marker_corners):
