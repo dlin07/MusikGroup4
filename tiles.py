@@ -11,7 +11,7 @@ screen_w = width
 screen_h = height
 half_w = screen_w/2
 pygame.display.set_caption("Musik")
-note_speed = 3
+note_speed = 5
 score = 0
 rows = 52
 row_w = screen_w / rows
@@ -80,7 +80,8 @@ def add_tile():
         except:
             return t[2]-tile_h-1
     y = getY()
-    tiles.append([color,2+row_w*col, y])
+    if (fLines[r_num][0] == 'note_on'):
+        tiles.append([color,2+row_w*col, fLines[r_num][2]*-300])
     r_num += 1
 # def find_length():
     
@@ -109,7 +110,7 @@ def draw_vertical_lines():
     global rows, screen, row_w, row_h
     for x in range(0,rows+1):
         pygame.draw.line(screen, (0,0,0), (row_w*x, 0), (row_w*x, row_h), 2)
-        # label("monospace", 15, number_to_note(x + 5, True) ,rgb.BLACK,(),center=(row_w*x + row_w/2, screen_h-20))
+        label("monospace", 15, number_to_note(x + 5, True) ,rgb.BLACK,(),center=(row_w*x + row_w/2, screen_h-20))
 tiles = []
 r_num = 0;
 cur_screen = 0
