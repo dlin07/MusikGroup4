@@ -63,9 +63,9 @@ def add_tile():
     c = int(fLines[r_num][1])
     lst = [0, 2, 4, 5, 7, 9, 11]
     if c % 12 in lst:
-        row = ((c - 21) // 12) * 7 + twelve_to_white_only((c - 21) % 12)
+        col = ((c - 21) // 12) * 7 + twelve_to_white_only((c - 21) % 12)
     else:
-        row = 0
+        col = 0
     color = rgb.BLUE
     if color == rgb.BLACK or color == rgb.WHITE:
         color = random.choice([rgb.BLUE,rgb.YELLOW,rgb.GREEN,rgb.RED])
@@ -80,7 +80,7 @@ def add_tile():
         except:
             return t[2]-tile_h-1
     y = getY()
-    tiles.append([color,2+row_w*row, -int(fLines[r_num][2])*300, row])
+    tiles.append([color,2+row_w*col, y])
     r_num += 1
 # def find_length():
     
