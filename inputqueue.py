@@ -3,6 +3,7 @@ import threading
 import queue
 import time
 from midi2Tiles import *
+import pygame.midi
 
 arduino_port = 'COM4'  # Replace with the actual serial port of your Arduino
 baud_rate = 115200
@@ -14,30 +15,41 @@ miss = 0
 
 gameover_received = False
 
-def read_kbd_input(inputQueue):
+def print_devices():
+    for n in range(pygame.midi.get_count()):
+        print (n,pygame.midi.get_device_info(n))
+
+def read_kbd_input(inputQueue, input_device):
     print('Ready for keyboard input:')
     while (True):
-        input_str = input()
-        inputQueue.put(input_str)
+        if input_device.poll():
+            data = input_device.read(1)[0]
+            action = data[0]
+            event = action[0]
+            note_number = action[1]
+            if (event == 159): # User pressed note (if this doesn't work try 143)
+                input_str = str(note_number) # If this doesn't work, try bit shifting (<< 8)
+                # input_str = input()
+                inputQueue.put(input_str)
 
 def user_accuracy(button_pressed_name, button_pressed_time, example_pressed_name, example_pressed_time, threshold):
-    # if(button_pressed_name == example_pressed_name):
-    if(button_pressed_time < example_pressed_time - threshold):
-        global early
-        early += 1
-        return 'Early'
-    elif (button_pressed_time > example_pressed_time + threshold):
-        global late
-        late += 1
-        return 'Late'
+    if(button_pressed_name == example_pressed_name):
+        if(button_pressed_time < example_pressed_time - threshold):
+            global early
+            early += 1
+            return 'Early'
+        elif (button_pressed_time > example_pressed_time + threshold):
+            global late
+            late += 1
+            return 'Late'
+        else:
+            global perfect
+            perfect += 1
+            return 'Perfect'
     else:
-        global perfect
-        perfect += 1
-        return 'Perfect'
-    # else:
-    #     global miss
-    #     miss += 1
-    #     return 'Miss'
+        global miss
+        miss += 1
+        return 'Miss'
 
 def main():
     try:
@@ -49,6 +61,20 @@ def main():
         arduino = serial.Serial(arduino_port, baud_rate, timeout=1)
         time.sleep(2)  # Allow time for the connection to establish
 
+        # Replace this with lines 148-152 of midi.py for setup, followed by lines 160-164 to start reading
+        try:
+            pygame.midi.init()
+            print_devices()
+        except:
+            print("unable to open device")
+        
+        try:
+            my_input = pygame.midi.Input(1)
+            inputThread = threading.Thread(target=read_kbd_input, args=(inputQueue,my_input), daemon=True)
+            inputThread.start()
+        except:
+            print("unable to read input")
+
         arduino.write("start".encode('utf-8') + b'\n')
         time.sleep(0.1)  # Give the Arduino time to process
         
@@ -57,9 +83,7 @@ def main():
             print("Received from Arduino:", received_data)
         else:
             print("No data received from Arduino")
-
-        inputThread = threading.Thread(target=read_kbd_input, args=(inputQueue,), daemon=True)
-        inputThread.start()
+        
         start_time = time.time() + 1
 
         while pos < len(example_song):

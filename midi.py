@@ -50,7 +50,7 @@ def readInput(input_device):
     moodChanger = time.time()
     emotions = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255)]
 
-    while True:
+    while True: # need
         if(time.time() - moodChanger >= 0.1):
             choice = random.choice(emotions)
             # print(choice)
@@ -59,18 +59,18 @@ def readInput(input_device):
             # print("mood set")
 
 
-        if input_device.poll():
-            data = input_device.read(1)[0]
-            action = data[0] 
+        if input_device.poll(): # need, keep polling
+            data = input_device.read(1)[0] # read from device when available
+            action = data[0] # get the action from the data
             # timestamp = event[1]
 
-            event = action[0]
-            note_number = action[1]
+            event = action[0] # need this to figure out if note is pressed or released
+            note_number = action[1] # need this to figure out what note number was pressed
             velocity = action[2]
 
-            if(event == 159 or event == 143):
+            if(event == 159 or event == 143): # change this to if event == 159 (note pressed)
                 # note pressed or released
-                specifier = note_number << 8
+                specifier = note_number << 8 # if the note is pressed, just send back the note_number
                 
                 global noteState
                 if (event == 159):
@@ -151,11 +151,11 @@ if __name__ == '__main__':
     except:
         print("unable to open device")
     
-    try:
-        arduino_thr = arduino_thread(1, "Arduino-Comm", 1)
-        arduino_thr.start()
-    except:
-        print("Unable to make arduino thread")
+    # try:
+    #     arduino_thr = arduino_thread(1, "Arduino-Comm", 1)
+    #     arduino_thr.start()
+    # except:
+    #     print("Unable to make arduino thread")
 
     try:
         my_input = pygame.midi.Input(1)
