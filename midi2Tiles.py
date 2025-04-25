@@ -20,7 +20,7 @@ def getMidiOutput(str):
             i['type'] = 'note_off'
     # put note, starttime, stoptime, as nested list in a list. # format is [type, note, time, channel]
         mem2=[]
-        if i['type'] == 'note_on' or i['type'] == 'note_off':
+        if i['type'] == 'note_on':
             mem2.append(i['type'])
             mem2.append(i['note'])
             mem2.append(i['time'])

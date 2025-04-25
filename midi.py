@@ -7,7 +7,7 @@ import random
 import numpy as np
 import music21
 
-port_name = "COM3"
+port_name = "COM4"
 baud = 115200
 arduino = None
 try:
